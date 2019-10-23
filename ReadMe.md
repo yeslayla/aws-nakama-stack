@@ -23,8 +23,9 @@ Parameters, `DatabaseUsername`, `DatabasePassword`, `DatabaseEndpoint`, and `Dat
 - [x] Dynamic Port Routing
 - [x] HTTPS
 - [x] Build Database
+    - [ ] Database configuration
+    - [x] Automatically migrate database
 - [ ] Custom Admin User
-- [x] Automatically migrate database
 - [ ] Custom security keys
 - [ ] Formatted Launch Parameters
 - [ ] Informative `ReadMe.md`
