@@ -169,7 +169,7 @@ Resources:
   TaskDefinition:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub 'https://s3.${AWS::Region}.amazonaws.com/sumu-cloudtools-us-east-1/${release}/cloudformation/nakama/task.yaml'
+      TemplateURL: !Sub 'https://s3.${AWS::Region}.amazonaws.com/${launchBucket}/${release}/cloudformation/nakama/task.yaml'
       Parameters:
         DatabaseUsername: !Ref DatabaseUsername
         DatabasePassword: !Ref DatabasePassword
