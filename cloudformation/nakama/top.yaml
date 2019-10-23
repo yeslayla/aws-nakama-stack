@@ -1,0 +1,189 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Nakama ECS Service
+Parameters:
+  #------------------------
+  # Deployment Information
+  #------------------------
+  environment:
+    Type: String
+    Description: Name of the environment to use in naming.
+    Default: production
+  release:
+    Type: String
+    Description: Name of the release name of the stack version to use.
+    Default: production
+    AllowedValues: ['develop', 'production']
+    ConstraintDescription: "Must be a possible release version."
+  launchBucket:
+    Type: String
+    Description: Bucket containing CloudFormation files
+
+  #-------------------
+  # ECS Configuration
+  #-------------------
+  EcsCluster:
+    Type: String
+    Description: The cluster to run the Nakama service on.
+  
+  #-----------------
+  # Load Balancing 
+  #-----------------
+  PublicSubnets:
+    Description: The public subnets for the ALB to run in.
+    Type: String
+  VpcId:
+    Description: ID of the VPC
+    Type: AWS::EC2::VPC::Id
+  PortalCertificate:
+    Description: Arn of AWS Certificate
+    Type: String
+
+  #----------------------
+  # Nakama Configuration
+  #----------------------
+  DatabaseUsername:
+    Type: String
+    Description: Username of the Postgres server
+    Default: postgres
+  DatabasePassword:
+    Type: String
+    Description: Password for the Postgres server
+  DatabaseEndpoint:
+    Type: String
+    Description: Endpoint for the Postgres server
+  DatabasePort:
+    Type: Number
+    Description: Port for the Postgres server
+    Default: 5432
+
+Resources:
+
+  #-----------------
+  # Load Balancing 
+  #-----------------
+  PublicALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      LoadBalancerAttributes:
+        - Key: deletion_protection.enabled
+          Value: false
+        - Key: idle_timeout.timeout_seconds
+          Value: 60
+      Scheme: internet-facing
+      SecurityGroups:
+        - !Ref SecurityGroup
+      Subnets: !Split [",", !Ref PublicSubnets]
+      Tags:
+        - Key: Name
+          Value: !Sub "Nakama-${environment}-ALB"
+        - Key: environment
+          Value: !Ref environment
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: ECS Allowed Ports
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: icmp
+          FromPort: "-1"
+          ToPort: "-1"
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: "443"
+          ToPort: "443"
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: "80"
+          ToPort: "80"
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: icmp
+          FromPort: "-1"
+          ToPort: "-1"
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: "0"
+          ToPort: "65535"
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: udp
+          FromPort: "0"
+          ToPort: "65535"
+          CidrIp: 0.0.0.0/0
+
+  # Target group for admin portal port
+  AdminPortalTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 30
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 15
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 2
+      Matcher:
+        HttpCode: '200'
+      HealthCheckPath: '/'
+      Port: 7351
+      Protocol: HTTP
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: '20'
+      VpcId: !Ref 'VpcId'
+      Tags:
+        - Key: Name
+          Value: !Sub 'nakama-${release}'
+
+  # HTTPS for Admin Portal
+  AdminPortalAlbListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      Certificates:
+        - CertificateArn: !Ref PortalCertificate
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref AdminPortalTargetGroup
+      LoadBalancerArn: !Ref PublicALB
+      Port: 443
+      Protocol: HTTPS
+
+  # Redirect HTTP -> HTTPS
+  AdminPortalRedirectAlbListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+      - Type: redirect
+        RedirectConfig:
+          Protocol: HTTPS
+          Port: 443
+          Host: '#{host}'
+          Path: '/#{path}'
+          Query: '#{query}'
+          StatusCode: HTTP_301
+      LoadBalancerArn: !Ref PublicALB
+      Port: 80
+      Protocol: HTTP
+
+  #-------------------
+  # ECS Task & Service
+  #-------------------
+  TaskDefinition:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub 'https://s3.${AWS::Region}.amazonaws.com/sumu-cloudtools-us-east-1/${release}/cloudformation/nakama/task.yaml'
+      Parameters:
+        DatabaseUsername: !Ref DatabaseUsername
+        DatabasePassword: !Ref DatabasePassword
+        DatabaseEndpoint: !Ref DatabaseEndpoint
+        DatabasePort: !Ref DatabasePort
+
+  EcsService:
+    DependsOn: AdminPortalAlbListener
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster: !Ref EcsCluster
+      DesiredCount: 1
+      TaskDefinition: !GetAtt TaskDefinition.Outputs.TaskArn
+      LoadBalancers:  
+        - ContainerName: "nakama"
+          ContainerPort: 7351
+          TargetGroupArn: !Ref 'AdminPortalTargetGroup'

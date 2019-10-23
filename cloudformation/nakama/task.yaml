@@ -1,0 +1,61 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Nakama ECS Task
+Parameters:
+  ServerName:
+    Type: String
+    Default: "nakama-default"
+  DatabaseUsername:
+    Type: String
+    Description: Username of the Postgres server
+    Default: postgres
+  DatabasePassword:
+    Type: String
+    Description: Password for the Postgres server
+  DatabaseEndpoint:
+    Type: String
+    Description: Endpoint for the Postgres server
+  DatabasePort:
+    Type: Number
+    Description: Port for the Postgres server
+    Default: 5432
+
+Resources:
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 7
+      LogGroupName: "sumu-nakama"
+
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+      - Name: nakama
+        Essential: 'true'
+        Image: "heroiclabs/nakama:2.7.0"
+        MemoryReservation: 800
+        PortMappings:
+        - HostPort: 0
+          ContainerPort: 7349
+        - HostPort: 0
+          ContainerPort: 7350
+        - HostPort: 0
+          ContainerPort: 7351
+        LogConfiguration:
+          LogDriver: awslogs
+          Options:
+            awslogs-region:
+              Ref: AWS::Region
+            awslogs-group:
+              Ref: LogGroup
+        EntryPoint:
+            - "/bin/sh"
+            - "-ecx"
+            - Fn::Sub: |
+                /nakama/nakama migrate up --database.address ${DatabaseUsername}:${DatabasePassword}@${DatabaseEndpoint}:${DatabasePort} &&
+                exec /nakama/nakama --name ${ServerName} --database.address ${DatabaseUsername}:${DatabasePassword}@${DatabaseEndpoint}:${DatabasePort}
+
+Outputs:
+  TaskArn:
+    Description: ARN of the TaskDefinition
+    Value: !Ref TaskDefinition
