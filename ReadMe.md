@@ -6,6 +6,6 @@ CloudFormation stack for creating an ECS service for Nakama.
 
 Make sure you are logged into the AWS Console and have permissions then click:
 
-[![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/template?stackName=BillingAlerts&templateURL=https://sumu-stacks.s3.amazonaws.com/nakama/production/cloudformation/top.yaml)
+[![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/template?stackName=BillingAlerts&templateURL=https://sumu-stacks.s3.amazonaws.com/nakama/production/cloudformation/nakama/top.yaml)
 
 Fill out the parameters and launch!
