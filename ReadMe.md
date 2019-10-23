@@ -10,6 +10,10 @@ Make sure you are logged into the AWS Console and have permissions then click:
 
 Fill out the parameters and launch!
 
+### Parameter Notes
+
+Parameters, `DatabaseUsername`, `DatabasePassword`, `DatabaseEndpoint`, and `DatabasePort`, only used if `CreateDatabase` is false.
+
 ## To Do
 
 - [ ] Load Balancing
@@ -18,6 +22,9 @@ Fill out the parameters and launch!
 - [ ] Auto Scaling
 - [x] Dynamic Port Routing
 - [x] HTTPS
+- [x] Build Database
 - [ ] Custom Admin User
 - [x] Automatically migrate database
 - [ ] Custom security keys
+- [ ] Formatted Launch Parameters
+- [ ] Informative `ReadMe.md`

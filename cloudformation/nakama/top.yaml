@@ -14,6 +14,9 @@ Parameters:
     Default: production
     AllowedValues: ['develop', 'production']
     ConstraintDescription: "Must be a possible release version."
+  VpcId:
+    Description: ID of the VPC
+    Type: AWS::EC2::VPC::Id
 
   #-------------------
   # ECS Configuration
@@ -28,9 +31,6 @@ Parameters:
   PublicSubnets:
     Description: The public subnets for the ALB to run in.
     Type: String
-  VpcId:
-    Description: ID of the VPC
-    Type: AWS::EC2::VPC::Id
   PortalCertificate:
     Description: Arn of AWS Certificate
     Type: String
@@ -38,6 +38,13 @@ Parameters:
   #----------------------
   # Nakama Configuration
   #----------------------
+
+  CreateDatabase:
+    Type: String
+    Default: "true"
+    AllowedValues: ["true", "false"]
+
+  # Manual Database Configuration
   DatabaseUsername:
     Type: String
     Description: Username of the Postgres server
@@ -45,15 +52,33 @@ Parameters:
   DatabasePassword:
     Type: String
     Description: Password for the Postgres server
+    Default: ""
   DatabaseEndpoint:
     Type: String
     Description: Endpoint for the Postgres server
+    Default: ""
   DatabasePort:
     Type: Number
     Description: Port for the Postgres server
     Default: 5432
 
+
+Conditions:
+  CreateRdsStack: !Equals [!Ref CreateDatabase, "true"]
+
 Resources:
+
+  #----------
+  # Database
+  #----------
+  RdsDatabase:
+    Condition: CreateRdsStack
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub 'https://s3.${AWS::Region}.amazonaws.com/sumu-stacks/nakama/${release}/cloudformation/nakama/rds.yaml'
+      Parameters:
+        environment: !Ref environment
+        VpcId: !Ref VpcId
 
   #-----------------
   # Load Balancing 
@@ -168,10 +193,10 @@ Resources:
     Properties:
       TemplateURL: !Sub 'https://s3.${AWS::Region}.amazonaws.com/sumu-stacks/nakama/${release}/cloudformation/nakama/task.yaml'
       Parameters:
-        DatabaseUsername: !Ref DatabaseUsername
-        DatabasePassword: !Ref DatabasePassword
-        DatabaseEndpoint: !Ref DatabaseEndpoint
-        DatabasePort: !Ref DatabasePort
+        DatabaseUsername: !If ["CreateRdsStack", !GetAtt RdsDatabase.Outputs.RdsUsername, !Ref DatabaseUsername]
+        DatabasePassword: !If ["CreateRdsStack", !Join ["", ["{{resolve:secretsmanager:", !GetAtt RdsDatabase.Outputs.RdsSecret, ":SecretString}}" ]], !Ref DatabasePassword]
+        DatabaseEndpoint: !If ["CreateRdsStack", !GetAtt RdsDatabase.Outputs.RdsEnpoint, !Ref DatabaseEndpoint]
+        DatabasePort: !If ["CreateRdsStack", !GetAtt RdsDatabase.Outputs.RdsPort, !Ref DatabasePort]
 
   EcsService:
     DependsOn: AdminPortalAlbListener

@@ -1,0 +1,90 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Nakama RDS stack
+Parameters:
+  #------------------------
+  # Deployment Information
+  #------------------------
+  environment:
+    Type: String
+    Description: Name of the environment
+    Default: production
+  VpcId:
+    Description: ID of the VPC
+    Type: AWS::EC2::VPC::Id
+
+  #------------------
+  # Secret's Manager
+  #------------------
+  Secret:
+    Type: String
+    Description: Arn of the secret in Secret's Manager
+    Default: ""
+
+Conditions:
+  CreateSecret: !Equals [!Ref Secret, ""]
+
+Resources:
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: RDS Allowed Ports
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: icmp
+          FromPort: "-1"
+          ToPort: "-1"
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: "5432"
+          ToPort: "5432"
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: icmp
+          FromPort: "-1"
+          ToPort: "-1"
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: "0"
+          ToPort: "65535"
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: udp
+          FromPort: "0"
+          ToPort: "65535"
+          CidrIp: 0.0.0.0/0
+
+  RdsPassword:
+    Type: AWS::SecretsManager::Secret
+    Condition: CreateSecret
+    Properties:
+      Name: !Sub "nakama/rds/password"
+      Description: "Master password for RDS"
+      GenerateSecretString:
+        ExcludePunctuation: true
+        ExcludeCharacters: '"@/\'
+
+  DbInstance:
+    Type: AWS::RDS::DBInstance
+    Properties: 
+      DBInstanceClass: db.t2.micro
+      DBInstanceIdentifier: !Sub "nakama-rds-${environment}"
+      Engine: postgres
+      MasterUsername: postgres
+      MasterUserPassword: !Join ["", ["{{resolve:secretsmanager:", !If [ CreateSecret, !Ref RdsPassword, !Ref Secret] ,":SecretString}}" ]]
+      Port: "5432"
+      AllocatedStorage: "100"
+      VPCSecurityGroups:
+        - !Ref SecurityGroup
+
+Outputs:
+  RdsSecret:
+    Description: ARN of the Secret's Manager secret for the RDS password
+    Value: !If [ CreateSecret, !Ref RdsPassword, !Ref Secret]
+  RdsUsername:
+    Description: ARN of the Secret's Manager secret for the RDS password
+    Value: postgres
+  RdsEnpoint:
+    Description: Endpoint to connect to database
+    Value: !GetAtt DbInstance.Endpoint.Address
+  RdsPort:
+    Description: Port to connect to database
+    Value: !GetAtt DbInstance.Endpoint.Port
