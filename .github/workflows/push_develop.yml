@@ -1,7 +1,11 @@
 
-name: Push to S3
+name: Push Develop Release
 
-on: ['push']
+on:
+  push:
+    branches-ignore:
+      - develop
+
 jobs:
   build:
     runs-on: ubuntu-latest
