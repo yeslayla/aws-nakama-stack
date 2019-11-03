@@ -25,7 +25,7 @@ Parameters, `DatabaseUsername`, `DatabasePassword`, `DatabaseEndpoint`, and `Dat
 - [x] Build Database
     - [ ] Database configuration
     - [x] Automatically migrate database
-- [ ] Custom Admin User
+- [x] Custom Admin User
 - [ ] Custom security keys
 - [ ] Formatted Launch Parameters
 - [ ] Informative `ReadMe.md`

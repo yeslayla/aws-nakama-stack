@@ -4,6 +4,22 @@ Parameters:
   ServerName:
     Type: String
     Default: "nakama-default"
+
+  #----------------------------
+  # Admin Portal Configuration
+  #----------------------------
+  NakamaUsername:
+    Type: String
+    Description: Username to access the Nakama admin portal
+    Default: "admin"
+  NakamaPasswordOverride:
+    Type: String
+    Description: Override Nakama admin portal password
+    Default: ""
+
+  #------------------------
+  # Database Configuration
+  #------------------------
   DatabaseUsername:
     Type: String
     Description: Username of the Postgres server
@@ -19,7 +35,21 @@ Parameters:
     Description: Port for the Postgres server
     Default: 5432
 
+Conditions:
+  CreateSecret: !Equals [!Ref NakamaPasswordOverride, ""]
+
 Resources:
+
+  AdminPortalPassword:
+    Type: AWS::SecretsManager::Secret
+    Condition: CreateSecret
+    Properties:
+      Name: !Sub "nakama/admin/password"
+      Description: "Admin portal password for Nakama"
+      GenerateSecretString:
+        ExcludePunctuation: true
+        ExcludeCharacters: '"@/\'
+
   LogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -48,13 +78,19 @@ Resources:
               Ref: AWS::Region
             awslogs-group:
               Ref: LogGroup
-        EntryPoint:
+        MountPoints:
+          - ContainerPath: /nakama/volume
+            SourceVolume: "nakama-volume"
+        EntryPoint: 
             - "/bin/sh"
             - "-ecx"
-            - Fn::Sub: |
-                /nakama/nakama migrate up --database.address ${DatabaseUsername}:${DatabasePassword}@${DatabaseEndpoint}:${DatabasePort} &&
-                exec /nakama/nakama --name ${ServerName} --database.address ${DatabaseUsername}:${DatabasePassword}@${DatabaseEndpoint}:${DatabasePort}
-
+            - !Join ["", [
+              !Sub "/nakama/nakama migrate up --database.address ${DatabaseUsername}:${DatabasePassword}@${DatabaseEndpoint}:${DatabasePort} &&\n",
+              !Sub "exec /nakama/nakama --name ${ServerName} --database.address ${DatabaseUsername}:${DatabasePassword}@${DatabaseEndpoint}:${DatabasePort} --console.username ${NakamaUsername} --console.password \"",
+              !If [CreateSecret, !Join ["", ["{{resolve:secretsmanager:",  !Ref AdminPortalPassword,":SecretString}}" ]], !Ref NakamaPasswordOverride ], "\""
+              ]]                
+      Volumes:
+        - Name: "nakama-volume"
 Outputs:
   TaskArn:
     Description: ARN of the TaskDefinition

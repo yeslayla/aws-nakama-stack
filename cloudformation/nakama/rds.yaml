@@ -12,16 +12,41 @@ Parameters:
     Description: ID of the VPC
     Type: AWS::EC2::VPC::Id
 
-  #------------------
-  # Secret's Manager
-  #------------------
-  Secret:
+  #-----------------
+  # RDS Information
+  #-----------------
+  InstanceClass:
     Type: String
-    Description: Arn of the secret in Secret's Manager
+    Description: Instance class for the dabase to run on
+    Default: db.t2.micro
+  DatabaseEngine:
+    Type: String
+    Description: Database engine for the database to use
+    Default: postgres
+  DatabaseUsername:
+    Type: String
+    Description: Master account's username for database
+    Default: postgres
+  DatabasePort:
+    Type: Number
+    Description: Port for the database to open a socket on
+    Default: "5432"
+  DatabaseStorage:
+    Type: Number
+    Description: The amount of storage (in GB) allocated to the RDS instance
+    Default: "100"
+  DatabaseAccessCidr:
+    Type: String
+    Description: The CIDR used in the security group to secure the database
+    Default: "0.0.0.0/0"
+  DatabaseSecret:
+    Type: String
+    Description: Arn of the secret in Secret's Manager to use as the password
     Default: ""
 
+
 Conditions:
-  CreateSecret: !Equals [!Ref Secret, ""]
+  CreateSecret: !Equals [!Ref DatabaseSecret, ""]
 
 Resources:
   SecurityGroup:
@@ -33,11 +58,11 @@ Resources:
         - IpProtocol: icmp
           FromPort: "-1"
           ToPort: "-1"
-          CidrIp: 0.0.0.0/0
+          CidrIp: !Ref DatabaseAccessCidr
         - IpProtocol: tcp
-          FromPort: "5432"
-          ToPort: "5432"
-          CidrIp: 0.0.0.0/0
+          FromPort: !Ref DatabasePort
+          ToPort: !Ref DatabasePort
+          CidrIp: !Ref DatabaseAccessCidr
       SecurityGroupEgress:
         - IpProtocol: icmp
           FromPort: "-1"
@@ -65,23 +90,23 @@ Resources:
   DbInstance:
     Type: AWS::RDS::DBInstance
     Properties: 
-      DBInstanceClass: db.t2.micro
+      DBInstanceClass: !Ref InstanceClass
       DBInstanceIdentifier: !Sub "nakama-rds-${environment}"
-      Engine: postgres
-      MasterUsername: postgres
-      MasterUserPassword: !Join ["", ["{{resolve:secretsmanager:", !If [ CreateSecret, !Ref RdsPassword, !Ref Secret] ,":SecretString}}" ]]
-      Port: "5432"
-      AllocatedStorage: "100"
+      Engine: !Ref DatabaseEngine
+      MasterUsername: !Ref DatabaseUsername
+      MasterUserPassword: !Join ["", ["{{resolve:secretsmanager:", !If [ CreateSecret, !Ref RdsPassword, !Ref DatabaseSecret] ,":SecretString}}" ]]
+      Port: !Ref DatabasePort
+      AllocatedStorage: !Ref DatabaseStorage
       VPCSecurityGroups:
         - !Ref SecurityGroup
 
 Outputs:
   RdsSecret:
     Description: ARN of the Secret's Manager secret for the RDS password
-    Value: !If [ CreateSecret, !Ref RdsPassword, !Ref Secret]
+    Value: !If [ CreateSecret, !Ref RdsPassword, !Ref DatabaseSecret]
   RdsUsername:
     Description: ARN of the Secret's Manager secret for the RDS password
-    Value: postgres
+    Value: !Ref DatabaseUsername
   RdsEnpoint:
     Description: Endpoint to connect to database
     Value: !GetAtt DbInstance.Endpoint.Address
