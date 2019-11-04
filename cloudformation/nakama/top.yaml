@@ -176,6 +176,41 @@ Resources:
           ToPort: "65535"
           CidrIp: 0.0.0.0/0
 
+  # Target group for HTTP api
+  HttpApiTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 30
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 15
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 2
+      Matcher:
+        HttpCode: '200'
+      HealthCheckPath: '/'
+      Port: 7350
+      Protocol: HTTP
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: '20'
+      VpcId: !Ref 'VpcId'
+      Tags:
+        - Key: Name
+          Value: !Sub 'nakama-http-${release}'
+
+  # HTTPS for HTTP Api
+  HttpApiAlbListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      Certificates:
+        - CertificateArn: !Ref PortalCertificate
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref HttpApiTargetGroup
+      LoadBalancerArn: !Ref PublicALB
+      Port: 7350
+      Protocol: HTTPS
+
   # Target group for admin portal port
   AdminPortalTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
