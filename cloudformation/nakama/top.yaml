@@ -180,14 +180,6 @@ Resources:
   HttpApiTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
-      HealthCheckIntervalSeconds: 30
-      HealthCheckProtocol: HTTP
-      HealthCheckTimeoutSeconds: 15
-      HealthyThresholdCount: 2
-      UnhealthyThresholdCount: 2
-      Matcher:
-        HttpCode: '200'
-      HealthCheckPath: '/'
       Port: 7350
       Protocol: HTTP
       TargetGroupAttributes:
