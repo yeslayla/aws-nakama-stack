@@ -66,6 +66,8 @@ Resources:
         MemoryReservation: 800
         PortMappings:
         - HostPort: 0
+          ContainerPort: 7348
+        - HostPort: 0
           ContainerPort: 7349
         - HostPort: 0
           ContainerPort: 7350

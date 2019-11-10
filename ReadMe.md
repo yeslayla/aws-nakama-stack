@@ -16,9 +16,8 @@ Parameters, `DatabaseUsername`, `DatabasePassword`, `DatabaseEndpoint`, and `Dat
 
 ## To Do
 
-- [ ] Load Balancing
-    - [x] Portal
-    - [ ] Application
+- [x] Load Balancing
+    - [ ] [Clustering](https://heroiclabs.com/nakama-enterprise/)
 - [ ] Auto Scaling
 - [x] Dynamic Port Routing
 - [x] HTTPS
@@ -29,3 +28,4 @@ Parameters, `DatabaseUsername`, `DatabasePassword`, `DatabaseEndpoint`, and `Dat
 - [ ] Custom security keys
 - [ ] Formatted Launch Parameters
 - [ ] Informative `ReadMe.md`
+- [ ] Load Server Modules

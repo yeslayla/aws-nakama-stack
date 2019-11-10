@@ -126,9 +126,103 @@ Resources:
   #-----------------
   # Load Balancing 
   #-----------------
+
+  #-- Network Load Balancer --#
+  PublicNLB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Type: network
+      LoadBalancerAttributes:
+        - Key: deletion_protection.enabled
+          Value: false
+      Scheme: internet-facing
+      Subnets: !Split [",", !Ref PublicSubnets]
+      Tags:
+        - Key: Name
+          Value: !Sub "Nakama-${environment}-NLB"
+        - Key: environment
+          Value: !Ref environment
+
+  # Target group for HTTP api
+  HttpApiTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Port: 7350
+      Protocol: TCP
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: '20'
+      VpcId: !Ref 'VpcId'
+      Tags:
+        - Key: Name
+          Value: !Sub 'nakama-http-${release}'
+
+  # Listener for HTTP
+  HttpApiNlbListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref HttpApiTargetGroup
+      LoadBalancerArn: !Ref PublicNLB
+      Port: 7350
+      Protocol: TCP
+
+  # Target group for gRPC API
+  GRpcApiTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Port: 7349
+      Protocol: TCP_UDP
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: '20'
+      VpcId: !Ref 'VpcId'
+      Tags:
+        - Key: Name
+          Value: !Sub 'nakama-GRpc-${release}'
+
+  # Listener for gRPC API
+  GRpcNlbListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref GRpcApiTargetGroup
+      LoadBalancerArn: !Ref PublicNLB
+      Port: 7349
+      Protocol: TCP_UDP
+
+  # Target group for gRPC embeded console
+  GRpcEApiTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Port: 7348
+      Protocol: TCP_UDP
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: '20'
+      VpcId: !Ref 'VpcId'
+      Tags:
+        - Key: Name
+          Value: !Sub 'nakama-GRpc-${release}'
+
+  # Listener for gRPC embeded console
+  GRpcENlbListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref GRpcEApiTargetGroup
+      LoadBalancerArn: !Ref PublicNLB
+      Port: 7348
+      Protocol: TCP_UDP
+
+  #-- Application Load Balancer --#
   PublicALB:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
+      Type: application
       LoadBalancerAttributes:
         - Key: deletion_protection.enabled
           Value: false
@@ -175,33 +269,6 @@ Resources:
           FromPort: "0"
           ToPort: "65535"
           CidrIp: 0.0.0.0/0
-
-  # Target group for HTTP api
-  HttpApiTargetGroup:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
-    Properties:
-      Port: 7350
-      Protocol: HTTP
-      TargetGroupAttributes:
-        - Key: deregistration_delay.timeout_seconds
-          Value: '20'
-      VpcId: !Ref 'VpcId'
-      Tags:
-        - Key: Name
-          Value: !Sub 'nakama-http-${release}'
-
-  # HTTPS for HTTP Api
-  HttpApiAlbListener:
-    Type: AWS::ElasticLoadBalancingV2::Listener
-    Properties:
-      Certificates:
-        - CertificateArn: !Ref PortalCertificate
-      DefaultActions:
-        - Type: forward
-          TargetGroupArn: !Ref HttpApiTargetGroup
-      LoadBalancerArn: !Ref PublicALB
-      Port: 7350
-      Protocol: HTTPS
 
   # Target group for admin portal port
   AdminPortalTargetGroup:
@@ -254,6 +321,7 @@ Resources:
       LoadBalancerArn: !Ref PublicALB
       Port: 80
       Protocol: HTTP
+      
 
   #-------------------
   # ECS Task & Service
@@ -280,4 +348,13 @@ Resources:
       LoadBalancers:  
         - ContainerName: "nakama"
           ContainerPort: 7351
-          TargetGroupArn: !Ref 'AdminPortalTargetGroup'
+          TargetGroupArn: !Ref AdminPortalTargetGroup
+        - ContainerName: "nakama"
+          ContainerPort: 7350
+          TargetGroupArn: !Ref HttpApiTargetGroup
+        - ContainerName: "nakama"
+          ContainerPort: 7349
+          TargetGroupArn: !Ref GRpcApiTargetGroup
+        - ContainerName: "nakama"
+          ContainerPort: 7348
+          TargetGroupArn: !Ref GRpcEApiTargetGroup
