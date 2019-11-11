@@ -1,0 +1,60 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Nakama DNS stack
+Parameters:
+  #------------------------
+  # Deployment Information
+  #------------------------
+  environment:
+    Type: String
+    Description: Name of the environment
+    Default: production
+
+  #-----------------------
+  # Route53 Configuration
+  #-----------------------
+  Domain:
+    Type: String
+    Description: The HostedZoneName to create the endpoint on
+  SubDomain:
+    Type: String
+    Description: The subdomain to be used by nakama
+
+  #-----------
+  # Resources
+  #-----------
+  NakamaDns:
+    Type: String
+    Description: Nakama load balancer dns endpoint
+  AdminDns:
+    Type: String
+    Description:  Application load balancer dns endpoint
+
+Resources:
+  AdminConsoleEndpoint:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Sub "${Domain}."
+      Comment: !Sub 'DNS name for admin console'
+      Name: !Sub "admin.${SubDomain}.${Domain}."
+      Type: CNAME
+      TTL: '300'
+      ResourceRecords:
+        - !Ref AdminDns
+  NakamaEndpoint:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Sub "${Domain}."
+      Comment: 'DNS name for nakama'
+      Name: !Sub "${SubDomain}.${Domain}."
+      Type: CNAME
+      TTL: '300'
+      ResourceRecords:
+        - !Ref NakamaDns
+
+Outputs:
+  AdminEndpoint:
+    Description: 'DNS name for admin console'
+    Value: !Sub "admin.${SubDomain}.${Domain}."
+  NakamaEndpoint:
+    Description: 'DNS name for nakama'
+    Value: !Sub "${SubDomain}.${Domain}."

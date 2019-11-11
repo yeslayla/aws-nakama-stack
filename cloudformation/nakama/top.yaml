@@ -99,11 +99,36 @@ Parameters:
     Type: String
     Description: The CIDR used in the security group to secure the database
     Default: "0.0.0.0/0"
+  Domain:
+    Type: String
+    Description: The domain to create the endpoint on (Must have an existing hosted zone ex. `example.com`) Leave blank to skip DNS.
+    Default: ""
+  SubDomain:
+    Type: String
+    Description: The subdomain to be used by nakama. (ex. `nakama.example.com`)
+    Default: nakama
 
 Conditions:
   CreateRdsStack: !Equals [!Ref CreateDatabase, "true"]
+  CreateDns: !Not [!Equals [!Ref Domain, ""]]
 
 Resources:
+
+  #-----
+  # DNS
+  #-----
+  DnsRecords:
+    Condition: CreateDns
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub 'https://s3.${AWS::Region}.amazonaws.com/sumu-stacks/nakama/${release}/cloudformation/nakama/dns.yaml'
+      Parameters:
+        environment: !Ref environment
+        Domain: !Ref Domain
+        SubDomain: !Ref SubDomain
+        NakamaDns: !GetAtt PublicNLB.DNSName
+        AdminDns: !GetAtt PublicALB.DNSName
+
 
   #----------
   # Database
