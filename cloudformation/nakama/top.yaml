@@ -21,15 +21,16 @@ Parameters:
   #-------------------
   # ECS Configuration
   #-------------------
-  EcsCluster:
+  EcsClusterOverride:
     Type: String
-    Description: The cluster to run the Nakama service on.
+    Description: The cluster to run the Nakama service on, if empty will create new cluster
+    Default: ""
   
   #-----------------
   # Load Balancing 
   #-----------------
   PublicSubnets:
-    Description: The public subnets for the ALB to run in.
+    Description: The public subnets for the ALB to run in. (Seperate by spaces)
     Type: String
   PortalCertificate:
     Description: Arn of AWS Certificate
@@ -111,6 +112,7 @@ Parameters:
 Conditions:
   CreateRdsStack: !Equals [!Ref CreateDatabase, "true"]
   CreateDns: !Not [!Equals [!Ref Domain, ""]]
+  CreateCluster: !Equals [!Ref EcsClusterOverride, ""]
 
 Resources:
 
@@ -154,13 +156,27 @@ Resources:
   LoadBalancing:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub 'https://s3.${AWS::Region}.amazonaws.com/sumu-stacks/${release}/cloudformation/nakama/load_balancing.yaml'
+      TemplateURL: !Sub 'https://s3.${AWS::Region}.amazonaws.com/sumu-stacks/nakama/${release}/cloudformation/nakama/load_balancing.yaml'
       Parameters:
         environment: !Ref environment
         release: !Ref release
         VpcId: !Ref VpcId
-        PublicSubnets: !Ref PublicSubnets
+        PublicSubnets: !Join [",", !Split [" ", !Ref PublicSubnets]]
         PortalCertificate: !Ref PortalCertificate
+
+  #-------------
+  # ECS Cluster
+  #-------------
+  EcsCluster:
+    Condition: CreateCluster
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub 'https://s3.${AWS::Region}.amazonaws.com/sumu-stacks/nakama/${release}/cloudformation/cluster/top.yaml'
+      Parameters:
+        Environment: !Ref environment
+        VpcId: !Ref VpcId
+        SubnetIds: !Join [",", !Split [" ", !Ref PublicSubnets]]
+        Project: "Nakama"
 
   #-------------------
   # ECS Task & Service
@@ -181,7 +197,7 @@ Resources:
     DependsOn: LoadBalancing
     Type: AWS::ECS::Service
     Properties:
-      Cluster: !Ref EcsCluster
+      Cluster: !If ["CreateCluster", !GetAtt EcsCluster.Outputs.Cluster, !Ref EcsClusterOverride]
       DesiredCount: 1
       TaskDefinition: !GetAtt TaskDefinition.Outputs.TaskArn
       LoadBalancers:  
