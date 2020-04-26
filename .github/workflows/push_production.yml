@@ -4,7 +4,7 @@ name: Push Production Release
 on:
   push:
     branches:
-      - develop
+      - master
 
 jobs:
   build:
