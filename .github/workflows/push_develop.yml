@@ -11,7 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@v1
+      uses: actions/checkout@v2.1.0
+      with:
+        submodules: 'true'
     - name: Ship to S3
       uses: jakejarvis/s3-sync-action@master
       with:
