@@ -29,6 +29,6 @@ jobs:
       uses: aws-actions/aws-cloudformation-github-deploy@v1
       with:
         name: ecs-nakama-stack
-        template: top.yaml
+        template: cloudformation/nakama/top.yaml
         capabilities: "CAPABILITY_NAMED_IAM,CAPABILITY_IAM"
         parameter-overrides: VpcId=${{ secrets.VPC_ID }},Domain=${{ secrets.DOMAIN }},SubDomain=nakama,PortalCertificate=${{ secrets.CERTIFICATE_ARN }},PublicSubnets=${{ secrets.SUBNET_IDS }}
