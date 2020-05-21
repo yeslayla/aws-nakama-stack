@@ -123,7 +123,7 @@ Resources:
     Condition: CreateDns
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub 'https://s3.${AWS::Region}.amazonaws.com/sumu-stacks/nakama/${release}/cloudformation/nakama/dns.yaml'
+      TemplateURL: !Sub 'https://s3.us-east-1.amazonaws.com/sumu-stacks/nakama/${release}/cloudformation/nakama/dns.yaml'
       Parameters:
         environment: !Ref environment
         Domain: !Ref Domain
@@ -139,7 +139,7 @@ Resources:
     Condition: CreateRdsStack
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub 'https://s3.${AWS::Region}.amazonaws.com/sumu-stacks/nakama/${release}/cloudformation/nakama/rds.yaml'
+      TemplateURL: !Sub 'https://s3.us-east-1.amazonaws.com/sumu-stacks/nakama/${release}/cloudformation/nakama/rds.yaml'
       Parameters:
         environment: !Ref environment
         VpcId: !Ref VpcId
@@ -156,7 +156,7 @@ Resources:
   LoadBalancing:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub 'https://s3.${AWS::Region}.amazonaws.com/sumu-stacks/nakama/${release}/cloudformation/nakama/load_balancing.yaml'
+      TemplateURL: !Sub 'https://s3.us-east-1.amazonaws.com/sumu-stacks/nakama/${release}/cloudformation/nakama/load_balancing.yaml'
       Parameters:
         environment: !Ref environment
         release: !Ref release
@@ -171,7 +171,7 @@ Resources:
     Condition: CreateCluster
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub 'https://s3.${AWS::Region}.amazonaws.com/sumu-stacks/nakama/${release}/cloudformation/cluster/top.yaml'
+      TemplateURL: !Sub 'https://s3.us-east-1.amazonaws.com/sumu-stacks/nakama/${release}/cloudformation/cluster/top.yaml'
       Parameters:
         Environment: !Ref environment
         VpcId: !Ref VpcId
@@ -184,7 +184,7 @@ Resources:
   TaskDefinition:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub 'https://s3.${AWS::Region}.amazonaws.com/sumu-stacks/nakama/${release}/cloudformation/nakama/task.yaml'
+      TemplateURL: !Sub 'https://s3.us-east-1.amazonaws.com/sumu-stacks/nakama/${release}/cloudformation/nakama/task.yaml'
       Parameters:
         DatabaseUsername: !If ["CreateRdsStack", !GetAtt RdsDatabase.Outputs.RdsUsername, !Ref DatabaseUsername]
         DatabasePassword: !If ["CreateRdsStack", !Join ["", ["{{resolve:secretsmanager:", !GetAtt RdsDatabase.Outputs.RdsSecret, ":SecretString}}" ]], !Ref DatabasePassword]
