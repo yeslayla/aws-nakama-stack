@@ -4,6 +4,10 @@ Parameters:
   ServerName:
     Type: String
     Default: "nakama-default"
+  NakamaContainer:
+    Type: String
+    Description: test
+    Default: "heroiclabs/nakama:2.7.0"
 
   #----------------------------
   # Admin Portal Configuration
@@ -62,7 +66,7 @@ Resources:
       ContainerDefinitions:
       - Name: nakama
         Essential: 'true'
-        Image: "heroiclabs/nakama:2.7.0"
+        Image: !Ref NakamaContainer
         MemoryReservation: 800
         PortMappings:
         - HostPort: 0

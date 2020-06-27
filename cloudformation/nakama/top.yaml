@@ -39,6 +39,10 @@ Parameters:
   #----------------------
   # Nakama Configuration
   #----------------------
+  NakamaContainer:
+    Type: String
+    Description: Container image for Nakama server
+    Default: "heroiclabs/nakama:2.7.0"
   NakamaUsername:
     Type: String
     Description: Username to access the Nakama admin portal
@@ -186,6 +190,7 @@ Resources:
     Properties:
       TemplateURL: !Sub 'https://s3.us-east-1.amazonaws.com/sumu-stacks/nakama/${release}/cloudformation/nakama/task.yaml'
       Parameters:
+        NakamaContainer: !Ref NakamaContainer
         DatabaseUsername: !If ["CreateRdsStack", !GetAtt RdsDatabase.Outputs.RdsUsername, !Ref DatabaseUsername]
         DatabasePassword: !If ["CreateRdsStack", !Join ["", ["{{resolve:secretsmanager:", !GetAtt RdsDatabase.Outputs.RdsSecret, ":SecretString}}" ]], !Ref DatabasePassword]
         DatabaseEndpoint: !If ["CreateRdsStack", !GetAtt RdsDatabase.Outputs.RdsEnpoint, !Ref DatabaseEndpoint]
