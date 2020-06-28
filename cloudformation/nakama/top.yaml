@@ -15,7 +15,7 @@ Parameters:
     AllowedValues: ['develop', 'production']
     ConstraintDescription: "Must be a possible release version."
   VpcId:
-    Description: ID of the VPC
+    Description: ID of the VPC to deploy resources.
     Type: AWS::EC2::VPC::Id
 
   #-------------------
@@ -23,7 +23,7 @@ Parameters:
   #-------------------
   EcsClusterOverride:
     Type: String
-    Description: The cluster to run the Nakama service on, if empty will create new cluster
+    Description: The cluster to run the Nakama service on, if empty will create new cluster.
     Default: ""
   
   #-----------------
@@ -33,7 +33,7 @@ Parameters:
     Description: The public subnets for the ALB to run in. (Seperate by spaces)
     Type: String
   PortalCertificate:
-    Description: Arn of AWS Certificate
+    Description: Arn of AWS Certificate in ACM
     Type: String
 
   #----------------------
@@ -51,6 +51,7 @@ Parameters:
     Type: String
     Description: Override Nakama admin portal password. Leave blank for random password.
     Default: ""
+    NoEcho: true
 
   #------------------------
   # Database Configuration
@@ -58,24 +59,26 @@ Parameters:
   CreateDatabase:
     Type: String
     Default: "true"
+    Description: If 
     AllowedValues: ["true", "false"]
 
   # Manual Database Configuration
   DatabaseUsername:
     Type: String
-    Description: Username of the Postgres server
+    Description: Manual username of the Postgres server
     Default: postgres
   DatabasePassword:
     Type: String
-    Description: Password for the Postgres server
+    Description: Manual password for the Postgres server
     Default: ""
+    NoEcho: true
   DatabaseEndpoint:
     Type: String
-    Description: Endpoint for the Postgres server
+    Description: Manual endpoint for the Postgres server
     Default: ""
   DatabasePort:
     Type: Number
-    Description: Port for the Postgres server
+    Description: Manual port for the Postgres server
     Default: 5432
 
   # Advanced RDS Configuration
@@ -87,7 +90,7 @@ Parameters:
     Type: String
     Description: Database engine for the database to use
     Default: postgres
-    AllowedValues: ["aurora", "aurora-mysql", "aurora-postgresql", "mariadb", "mysql", "oracle-ee", "oracle-se2", "oracle-se1", "oracle-se", "postgres", "sqlserver-ee", "sqlserver-se", "sqlserver-ex", "sqlserver-web"]
+    AllowedValues: ["aurora-postgresql", "postgres"]
   RdsUsername:
     Type: String
     Description: Master account's username for database
@@ -104,6 +107,10 @@ Parameters:
     Type: String
     Description: The CIDR used in the security group to secure the database
     Default: "0.0.0.0/0"
+
+  #-----
+  # DNS
+  #-----
   Domain:
     Type: String
     Description: The domain to create the endpoint on (Must have an existing hosted zone ex. `example.com`) Leave blank to skip DNS.
@@ -112,6 +119,100 @@ Parameters:
     Type: String
     Description: The subdomain to be used by nakama. (ex. `nakama.example.com`)
     Default: nakama
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: "Deployment Information"
+      Parameters:
+      - environment
+      - release
+      - VpcId
+      - PublicSubnets
+    - Label:
+        default: "DNS"
+      Parameters:
+      - Domain
+      - SubDomain
+    - Label:
+        default: "Nakama Configuration"
+      Parameters:
+      - NakamaContainer
+      - NakamaUsername
+      - NakamaPasswordOverride
+    - Label:
+        default: "Load Balancing"
+      Parameters:
+      - PortalCertificate
+    - Label:
+        default: "ECS Configuration"
+      Parameters:
+      - EcsClusterOverride
+    - Label:
+        default: "Database Configuration"
+      Parameters:
+      - CreateDatabase
+    - Label:
+        default: "Manual Database Configuration"
+      Parameters:
+      - DatabaseUsername
+      - DatabasePassword
+      - DatabaseEndpoint
+      - DatabasePort
+    - Label:
+        default: "RDS Configuration"
+      Parameters:
+      - RdsInstanceClass
+      - RdsEngine
+      - RdsUsername
+      - RdsPort
+      - RdsStorage
+      - RdsAccessCidr
+    ParameterLabels:
+      environment:
+        default: "Environment"
+      release:
+        default: "Release"
+      VpcId:
+        default: "Vpc Id"
+      EcsClusterOverride:
+        default: "Optional ECS Cluster Override"
+      PublicSubnets:
+        default: "Public Subnets"
+      PortalCertificate:
+        default: "Admin Portal ACM Certificate"
+      Domain:
+        default: "Route53 Domain"
+      NakamaContainer:
+        default: "Nakama Container Image"
+      NakamaUsername:
+        default: "Nakama Username"
+      NakamaPasswordOverride:
+        default: "Nakama Password Override"
+      CreateDatabase:
+        default: "Create RDS database?"
+      DatabaseUsername:
+        default: "Remote Database Username"
+      DatabasePassword:
+        default: "Remote Database Password"
+      DatabaseEndpoint:
+        default: "Remote Database Endpoint"
+      DatabasePort:
+        default: "Remote Database Port"
+      RdsInstanceClass:
+        default: "RDS Instance Class"
+      RdsEngine:
+        default: "RDS Engine"
+      RdsUsername:
+        default: "RDS Username"
+      RdsPort:
+        default: "RDS Port"
+      RdsStorage:
+        default: "RDS Storage"
+      RdsAccessCidr:
+        default: "RDS Allow Access CIDR"
+
 
 Conditions:
   CreateRdsStack: !Equals [!Ref CreateDatabase, "true"]
