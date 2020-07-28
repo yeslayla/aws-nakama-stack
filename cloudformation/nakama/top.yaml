@@ -25,6 +25,10 @@ Parameters:
     Type: String
     Description: The cluster to run the Nakama service on, if empty will create new cluster.
     Default: ""
+  RepositoryCredentialsSecret:
+    Type: String
+    Description: Arn of repostiory secret from AWS Secrets Manager. See https://docs.aws.amazon.com/AmazonECS/latest/developerguide/private-auth.html for more information
+    Default: ""
   
   #-----------------
   # Load Balancing 
@@ -149,6 +153,7 @@ Metadata:
         default: "ECS Configuration"
       Parameters:
       - EcsClusterOverride
+      - RepositoryCredentialsSecret
     - Label:
         default: "Database Configuration"
       Parameters:
@@ -212,6 +217,8 @@ Metadata:
         default: "RDS Storage"
       RdsAccessCidr:
         default: "RDS Allow Access CIDR"
+      RepositoryCredentialsSecret:
+        default: "Docker Repository Credentials"
 
 
 Conditions:
@@ -298,6 +305,7 @@ Resources:
         DatabasePort: !If ["CreateRdsStack", !GetAtt RdsDatabase.Outputs.RdsPort, !Ref DatabasePort]
         NakamaUsername: !Ref NakamaUsername
         NakamaPasswordOverride: !Ref NakamaPasswordOverride
+        RepositoryCredentialsSecret: !Ref RepositoryCredentialsSecret
 
   EcsService:
     DependsOn: LoadBalancing
