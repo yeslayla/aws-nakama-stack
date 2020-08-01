@@ -46,8 +46,40 @@ Parameters:
 Conditions:
   CreateSecret: !Equals [!Ref NakamaPasswordOverride, ""]
   NoRepositoryCredentials: !Equals [!Ref RepositoryCredentialsSecret, ""]
+  RepositoryCredentials: !Not [!Equals [!Ref RepositoryCredentialsSecret, ""]]
 
 Resources:
+
+  EcsExecutionerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - ecs-tasks.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
+  EcsExecutionPolicy:
+    Condition: RepositoryCredentials
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: AllowGettingSecrets
+      Roles:
+        - !Ref EcsExecutionerRole
+      PolicyDocument:
+        Statement:
+          - Sid: ReadDockerSecret
+            Action:
+              - secretsmanager:Describe*
+              - secretsmanager:Get*
+              - secretsmanager:List*
+            Effect: Allow
+            Resource: !Ref RepositoryCredentialsSecret
 
   AdminPortalPassword:
     Type: AWS::SecretsManager::Secret
@@ -68,6 +100,7 @@ Resources:
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
+      ExecutionRoleArn: !Ref EcsExecutionerRole
       ContainerDefinitions:
       - !If
         - NoRepositoryCredentials
