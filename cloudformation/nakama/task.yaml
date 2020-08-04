@@ -3,7 +3,7 @@ Description: Nakama ECS Task
 Parameters:
   ServerName:
     Type: String
-    Default: "nakama-default"
+    Default: "main"
   NakamaContainer:
     Type: String
     Description: test
